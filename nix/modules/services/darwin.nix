@@ -1,5 +1,8 @@
 # nix-darwin service module for Odysseus.
-{ src }:
+{
+  src,
+  pinnedPkgsFor ? null,
+}:
 {
   config,
   lib,
@@ -20,10 +23,23 @@ let
     curl
     git
   ];
-  inherit (lib) mkIf mkOption types optionalAttrs;
+  inherit (lib)
+    mkIf
+    mkOption
+    types
+    optionalAttrs
+    ;
 in
 {
-  options.services.odysseus = import ./options.nix { inherit src config lib pkgs; };
+  options.services.odysseus = import ./options.nix {
+    inherit
+      src
+      pinnedPkgsFor
+      config
+      lib
+      pkgs
+      ;
+  };
 
   config = mkIf cfg.enable {
     users.users.${cfg.user} = {

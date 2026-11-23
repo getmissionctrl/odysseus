@@ -43,8 +43,12 @@ let
       rawNames = lib.filter (n: n != null) (map nameOf lines);
       normalisedNames = map normalise rawNames;
       # Packages to skip (test-only or not in nixpkgs)
-      # fastembed is not available on aarch64-linux (badPlatform in nixpkgs)
-      skipPackages = [ "httpx2" ] ++ lib.optionals stdenv.isAarch64 [ "fastembed" ];
+      # fastembed is not available on aarch64-linux (badPlatform in nixpkgs);
+      # aarch64-darwin is fine, so only skip it on Linux.
+      skipPackages = [
+        "httpx2"
+      ]
+      ++ lib.optionals (stdenv.hostPlatform.isAarch64 && stdenv.hostPlatform.isLinux) [ "fastembed" ];
     in
     lib.unique (lib.filter (n: !builtins.elem n skipPackages) normalisedNames);
 
@@ -61,9 +65,16 @@ let
   # [docx,pptx,xlsx,xls] extras from requirements-optional.txt come for free.
   optionalExtras = {
     pdf = ps: [ ps.pymupdf ]; # PyMuPDF — PDF form-filling (AGPL-3.0)
-    stt = ps: [ ps.faster-whisper ]; # local speech-to-text (CTranslate2 backend)
+    # faster-whisper is now a core requirement; kept as a no-op alias so
+    # existing `extras = [ "stt" ]` configs keep evaluating.
+    stt = ps: [ ps.faster-whisper ];
     ddg = ps: [ ps.ddgs ]; # DuckDuckGo as a search provider option
     markitdown = ps: [ ps.markitdown ]; # Office/EPUB text extraction
+    ocr = ps: [
+      ps.rapidocr
+      ps.onnxruntime
+    ]; # local OCR for screenshots / scans
+    psd = ps: [ ps.psd-tools ]; # Photoshop PSD previews / layer inspection
   };
   extraFromExtras = ps: lib.concatMap (e: (optionalExtras.${e} or (_: [ ])) ps) extras;
 
@@ -118,7 +129,7 @@ stdenv.mkDerivation {
   meta = {
     mainProgram = "odysseus";
     description = "Odysseus AI assistant";
-    license = lib.licenses.agpl3Only;
+    license = lib.licenses.agpl3Plus; # upstream: AGPL-3.0-or-later
   };
 
   # Exposed so the dev shell (nix/shell.nix) can put the full interpreter

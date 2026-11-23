@@ -48,7 +48,7 @@ pkgs.mkShell {
       # this is the editable dev environment (cf. PR #2567 review feedback).
       odysseus.passthru.pythonEnv
     ]
-    ++ lib.optionals pkgs.stdenv.isLinux [
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
       gosu
     ]
     ++ runtimeLibs

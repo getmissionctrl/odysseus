@@ -10,9 +10,11 @@
 let
   constantsContent = builtins.readFile (src + "/src/constants.py");
   versionLine = builtins.head (
-    builtins.filter
-      (line: builtins.match ''APP_VERSION[[:space:]]*=.*'' line != null)
-      (builtins.filter (line: line != "") (builtins.filter (l: builtins.typeOf l == "string") (builtins.split "\n" constantsContent)))
+    builtins.filter (line: builtins.match "APP_VERSION[[:space:]]*=.*" line != null) (
+      builtins.filter (line: line != "") (
+        builtins.filter (l: builtins.typeOf l == "string") (builtins.split "\n" constantsContent)
+      )
+    )
   );
   version = builtins.head (
     builtins.match ''APP_VERSION[[:space:]]*=[[:space:]]*"([^"]+)".*'' versionLine

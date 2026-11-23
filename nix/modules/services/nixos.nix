@@ -1,5 +1,8 @@
 # NixOS service module for Odysseus.
-{ src }:
+{
+  src,
+  pinnedPkgsFor ? null,
+}:
 {
   config,
   lib,
@@ -32,6 +35,7 @@ in
     import ./options.nix {
       inherit
         src
+        pinnedPkgsFor
         config
         lib
         pkgs
@@ -39,6 +43,20 @@ in
     }
     // {
       openFirewall = lib.mkEnableOption "opening the firewall for the Odysseus app port";
+
+      browser = {
+        enable = lib.mkEnableOption ''
+          a Chromium for the built-in Browser MCP server (Playwright MCP via
+          npx). NixOS has no /usr/bin/google-chrome, so without this the
+          Browser tools fall back to Playwright's own download, which does
+          not run on NixOS'';
+        package = mkOption {
+          type = types.package;
+          default = pkgs.chromium;
+          defaultText = lib.literalExpression "pkgs.chromium";
+          description = "Browser passed to the app as ODYSSEUS_BROWSER_EXECUTABLE.";
+        };
+      };
     };
 
   config = mkIf cfg.enable {
@@ -155,6 +173,10 @@ in
       // optionalAttrs cfg.searxng.enable {
         # Connect to the bundled SearXNG instance (services.searx).
         SEARXNG_INSTANCE = "http://127.0.0.1:${toString cfg.searxng.port}";
+      }
+      // optionalAttrs cfg.browser.enable {
+        # Read by src/builtin_mcp.py for the Playwright MCP --executable-path.
+        ODYSSEUS_BROWSER_EXECUTABLE = lib.getExe cfg.browser.package;
       }
       // cfg.extraEnvironmentVariables;
 

@@ -1,6 +1,7 @@
 # Shared options for NixOS and nix-darwin Odysseus service modules.
 {
   src,
+  pinnedPkgsFor ? null,
   config,
   lib,
   pkgs,
@@ -11,6 +12,22 @@ let
 in
 {
   enable = mkEnableOption "Odysseus AI assistant";
+
+  useFlakeNixpkgs = mkOption {
+    type = types.bool;
+    default = pinnedPkgsFor != null;
+    defaultText = lib.literalExpression "true when imported from the flake";
+    description = ''
+      Build the default `package` from the flake's own locked nixpkgs
+      (with the Odysseus overlay) instead of the host's `pkgs`. The app then
+      runs the exact Python closure the flake was tested with, regardless of
+      which nixpkgs the host is on. Set to false to build against the host's
+      nixpkgs (smaller closure if the host is close to the flake's pin, but
+      Python dependency versions follow the host). Only affects the app
+      package; services such as SearXNG and llama.cpp still come from the
+      host's pkgs.
+    '';
+  };
 
   extraPythonPackages = mkOption {
     type = with lib.types; functionTo (listOf package);
@@ -35,13 +52,17 @@ in
         # having to wire nixpkgs.overlays. Without this, niquests (and caldav)
         # build with doCheck=true on Darwin and their live test suites fail SSL
         # verification in the build sandbox.
-        overlaidPkgs = pkgs.extend (import ../../overlay.nix);
+        overlaidPkgs =
+          if cfg.useFlakeNixpkgs && pinnedPkgsFor != null then
+            pinnedPkgsFor pkgs.stdenv.hostPlatform.system
+          else
+            pkgs.extend (import ../../overlay.nix);
       in
       overlaidPkgs.callPackage ../../odysseus.nix {
         inherit src;
         extraPythonPackages = cfg.extraPythonPackages;
       };
-    defaultText = lib.literalExpression "odysseus built with config.services.odysseus.extraPythonPackages";
+    defaultText = lib.literalExpression "odysseus built (from the flake's nixpkgs when useFlakeNixpkgs) with config.services.odysseus.extraPythonPackages";
     description = "The odysseus package to use.";
   };
 
