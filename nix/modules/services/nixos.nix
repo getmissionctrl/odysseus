@@ -12,7 +12,17 @@
 let
   cfg = config.services.odysseus;
   inherit (import ../../lib.nix) mkRuntimeLibs;
-  runtimeLibs = mkRuntimeLibs pkgs;
+  # Take the runtime libs from the same nixpkgs the app package is built
+  # from. With useFlakeNixpkgs the app comes from the flake's pin; putting
+  # the *host's* (possibly older) libstdc++ first on LD_LIBRARY_PATH breaks
+  # native wheels built against the newer one (onnxruntime → fastembed:
+  # "GLIBCXX_3.4.35 not found", so RAG / vector memory never initialise).
+  appPkgs =
+    if cfg.useFlakeNixpkgs && pinnedPkgsFor != null then
+      pinnedPkgsFor pkgs.stdenv.hostPlatform.system
+    else
+      pkgs;
+  runtimeLibs = mkRuntimeLibs appPkgs;
   # Tools the app shells out to / probes with shutil.which at runtime
   # (Cookbook background jobs, the Browser MCP via npx, remote server probes).
   mkServiceTools = with pkgs; [

@@ -14,7 +14,7 @@ import subprocess
 import sys
 
 from core.platform_compat import IS_WINDOWS, which_tool
-from src.runtime_paths import get_app_root
+from src.runtime_paths import get_app_root, get_default_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +228,14 @@ async def register_builtin_servers(mcp_manager):
                 if server_id == "builtin_browser":
                     cache_home = os.environ.get(
                         "ODYSSEUS_BROWSER_MCP_CACHE",
-                        os.path.join(base_dir, "data", "local", "playwright-mcp-cache"),
+                        # Under the mutable data dir (same resolution as
+                        # constants.DATA_DIR): base_dir is the install dir,
+                        # read-only on Nix / packaged installs.
+                        os.path.join(
+                            os.getenv("ODYSSEUS_DATA_DIR", get_default_data_dir()),
+                            "local",
+                            "playwright-mcp-cache",
+                        ),
                     )
                     os.makedirs(cache_home, exist_ok=True)
                     env = {
