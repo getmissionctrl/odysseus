@@ -32,7 +32,9 @@ DIRS = [
     RAG_DIR,
     MEMORY_VECTORS_DIR,
     AGENT_WORKSPACE_DIR,
-    os.path.join(BASE_DIR, "logs"),
+    # DATA_DIR, not BASE_DIR: BASE_DIR is the install dir, read-only on Nix
+    # (and in other packaged installs); app.py already logs to DATA_DIR/logs.
+    os.path.join(DATA_DIR, "logs"),
 ]
 
 
@@ -162,6 +164,11 @@ def create_env():
         print("  [skip] .env already exists")
         return
     if os.path.exists(example_path):
+        if not os.access(BASE_DIR, os.W_OK):
+            # Read-only install (Nix store, distro package): configuration
+            # comes from the service environment / EnvironmentFile instead.
+            print("  [skip] install dir is read-only — set config via environment")
+            return
         import shutil
         shutil.copy2(example_path, env_path)
         print("  [ok] .env created from .env.example")
